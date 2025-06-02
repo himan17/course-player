@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Video Progress Tracker</title>
+
+    <!-- Roboto -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/cloudinary-video-player/dist/cld-video-player.min.css"
+      rel="stylesheet"
+    />
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/cloudinary-video-player/dist/cld-video-player.min.js"
+      type="text/javascript"
+    ></script>
+
+    <style>
+      :root {
+        /* Modern, accessible color palette */
+        --primary: #6366f1; /* Indigo for primary actions */
+        --primary-light: #eef2ff; /* Light indigo for backgrounds */
+        --primary-dark: #4338ca; /* Dark indigo for hover states */
+        --accent: #f59e0b; /* Amber for accent/secondary actions */
+        --accent-light: #fef3c7; /* Light amber for subtle highlights */
+        --bg: #f9fafb; /* Off-white for main background */
+        --completed: #10b981; /* Emerald for completed states */
+        --completed-bg: #d1fae5; /* Light emerald background */
+        --placeholder: #e5e7eb; /* Light gray for placeholders */
+        --text-dark: #1f2937; /* Near-black for primary text */
+        --text-medium: #4b5563; /* Dark gray for secondary text */
+        --text-light: #6b7280; /* Medium gray for tertiary text */
+        --error: #ef4444; /* Red for errors */
+        --success: #10b981; /* Green for success */
+        --border: #e5e7eb; /* Light gray for borders */
+        --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+          0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+          0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        --radius-sm: 0.375rem; /* 6px */
+        --radius-md: 0.5rem; /* 8px */
+        --radius-lg: 0.75rem; /* 12px */
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", Roboto, sans-serif;
+        height: 100vh;
+        display: flex;
+        background: var(--bg);
+        color: var(--text-dark);
+        overflow: hidden;
+        line-height: 1.5;
+        font-size: 16px;
+      }
+
+      /* ───────── Sidebar ───────── */
+      #sidebar {
+        width: 320px;
+        min-width: 280px;
+        background: var(--primary-light);
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding: 20px;
+        box-shadow: var(--shadow-md);
+        overflow: hidden;
+        position: relative;
+        z-index: 10;
+      }
+
+      #sidebar h2 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 700;
+        text-align: center;
+        padding-bottom: 12px;
+        border-bottom: 2px solid rgba(0, 0, 0, 0.06);
+        color: var(--primary-dark);
+      }
+
+      #pickFolder {
+        padding: 12px 16px;
+        border: none;
+        border-radius: var(--radius-md);
+        font-weight: 600;
+        cursor: pointer;
+        background: var(--accent);
+        color: white;
+        box-shadow: var(--shadow-sm);
+        transition: all 0.2s ease;
+        font-size: 0.95rem;
+        width: 100%;
+      }
+
+      #pickFolder:hover {
+        background: var(--accent);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
+      }
+
+      #pickFolder:active {
+        transform: translateY(0);
+      }
+
+      #folderPath {
+        font-size: 0.85rem;
+        color: var(--text-medium);
+        padding: 10px 12px;
+        background: white;
+        border-radius: var(--radius-sm);
+        word-break: break-all;
+        max-height: 60px;
+        overflow-y: auto;
+        border: 1px solid var(--border);
+      }
+
+      #videoList {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        flex: 1;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        background: white;
+      }
+
+      #videoList::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      #videoList::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      #videoList::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 3px;
+      }
+
+      #videoList::-webkit-scrollbar-thumb:hover {
+        background: rgba(0, 0, 0, 0.3);
+      }
+
+      #videoList li {
+        padding: 14px 16px;
+        cursor: pointer;
+        transition: all 0.15s;
+        font-size: 0.95rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: var(--text-medium);
+        border-bottom: 1px solid var(--border);
+        position: relative;
+      }
+
+      #videoList li:last-child {
+        border-bottom: none;
+      }
+
+      #videoList li:hover:not(.placeholder) {
+        background: rgba(99, 102, 241, 0.05);
+      }
+
+      #videoList li.active {
+        background: rgba(99, 102, 241, 0.1);
+        font-weight: 600;
+        border-left: 4px solid var(--primary);
+        padding-left: 12px;
+        color: var(--primary-dark);
+      }
+
+      #videoList li.completed {
+        background: var(--completed-bg);
+        color: var(--completed);
+        font-weight: 500;
+      }
+
+      #videoList li.completed::after {
+        content: "✓";
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-weight: bold;
+        color: var(--completed);
+      }
+
+      #videoList li.placeholder {
+        background: var(--placeholder);
+        color: var(--text-light);
+        cursor: default;
+        pointer-events: none;
+        font-style: italic;
+        opacity: 0.7;
+      }
+
+      #stats {
+        padding: 14px;
+        background: white;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border);
+        font-size: 0.9rem;
+      }
+
+      #stats .stat-item {
+        display: flex;
+        justify-content: space-between;
+        margin: 6px 0;
+        color: var(--text-medium);
+      }
+
+      #stats .stat-item strong {
+        color: var(--text-dark);
+      }
+
+      /* ───────── Main / Player ───────── */
+      #main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        min-width: 0;
+        height: 100vh;
+      }
+
+      #playerContainer {
+        flex: 1;
+        background: #000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        z-index: 1;
+        min-height: 50%;
+      }
+
+      #player {
+        width: fit-content;
+        height: 100%;
+        outline: none;
+        background: #000;
+      }
+
+      #emptyState {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-light);
+        text-align: center;
+        padding: 40px;
+        height: 100%;
+        background: #f3f4f6;
+      }
+
+      #emptyState h3 {
+        margin: 0 0 16px 0;
+        font-size: 1.5rem;
+        color: var(--text-medium);
+      }
+
+      #emptyState p {
+        margin: 0;
+        font-size: 1.1rem;
+        line-height: 1.6;
+        max-width: 450px;
+      }
+
+      #focusOverlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.85);
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        z-index: 0;
+      }
+
+      body.focus-mode #sidebar,
+      body.focus-mode #controls {
+        filter: blur(5px) brightness(30%);
+      }
+
+      body.focus-mode #focusOverlay {
+        opacity: 1;
+      }
+
+      /* ───────── Controls ───────── */
+      #controls {
+        padding: 24px;
+        background: white;
+        border-top: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        box-shadow: var(--shadow-sm);
+        min-height: 200px;
+      }
+
+      #progressWrapper {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 14px;
+        background: var(--primary-light);
+        border-radius: var(--radius-md);
+        border: 1px solid rgba(99, 102, 241, 0.2);
+      }
+
+      #progressWrapper label {
+        font-weight: 600;
+        min-width: 70px;
+        color: var(--primary-dark);
+      }
+
+      progress {
+        flex: 1;
+        height: 10px;
+        appearance: none;
+        border: none;
+        border-radius: 5px;
+        overflow: hidden;
+      }
+
+      progress::-webkit-progress-bar {
+        background: #e2e8f0;
+        border-radius: 5px;
+      }
+
+      progress::-webkit-progress-value {
+        background: var(--primary);
+        border-radius: 5px;
+        transition: width 0.3s ease;
+      }
+
+      progress::-moz-progress-bar {
+        background: var(--primary);
+        border-radius: 5px;
+      }
+
+      #currentVideo {
+        font-weight: 600;
+        color: var(--text-dark);
+        padding: 12px 16px;
+        background: #f9fafb;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border);
+        margin-bottom: 8px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 120px;
+        max-height: 200px;
+        resize: vertical;
+        padding: 14px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        font-family: inherit;
+        font-size: 0.95rem;
+        line-height: 1.5;
+        transition: all 0.2s ease;
+        color: var(--text-dark);
+      }
+
+      textarea:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+      }
+
+      .btn {
+        padding: 12px 20px;
+        border: none;
+        border-radius: var(--radius-md);
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        background: var(--primary);
+        color: white;
+        box-shadow: var(--shadow-sm);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.95rem;
+        min-height: 46px;
+      }
+
+      .btn:hover:not(:disabled) {
+        background: var(--primary-dark);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
+      }
+
+      .btn:active:not(:disabled) {
+        transform: translateY(0);
+      }
+
+      .btn.accent {
+        background: var(--accent);
+        color: white;
+      }
+
+      .btn.accent:hover:not(:disabled) {
+        background: #e69009;
+      }
+
+      .btn.secondary {
+        background: #f3f4f6;
+        color: var(--text-dark);
+        border: 1px solid var(--border);
+      }
+
+      .btn.secondary:hover:not(:disabled) {
+        background: #e5e7eb;
+      }
+
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
+      .button-row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .button-row .btn {
+        flex: 1;
+        min-width: 120px;
+      }
+
+      .notes-section {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .notes-section label {
+        font-weight: 600;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: var(--text-dark);
+      }
+
+      .auto-save-indicator {
+        font-size: 0.85rem;
+        color: var(--text-light);
+        font-weight: normal;
+      }
+
+      /* ───────── Responsive ───────── */
+      @media (max-width: 768px) {
+        body {
+          flex-direction: column;
+        }
+
+        #sidebar {
+          width: 100%;
+          max-height: 40vh;
+          overflow-y: auto;
+        }
+
+        #main {
+          flex: 1;
+          min-height: 60vh;
+        }
+
+        .button-row {
+          flex-direction: column;
+        }
+
+        .button-row .btn {
+          min-width: unset;
+        }
+
+        #controls {
+          padding: 16px;
+          gap: 14px;
+        }
+      }
+
+      /* ───────── Loading & Error States ───────── */
+      .loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        color: var(--text-medium);
+        font-style: italic;
+        padding: 16px;
+      }
+
+      .loading::before {
+        content: "";
+        width: 20px;
+        height: 20px;
+        border: 2px solid rgba(99, 102, 241, 0.3);
+        border-top-color: var(--primary);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .error-message {
+        background: var(--error);
+        color: white;
+        padding: 14px;
+        border-radius: var(--radius-md);
+        margin: 10px 0;
+        text-align: center;
+        font-weight: 500;
+      }
+
+      .success-message {
+        background: var(--success);
+        color: white;
+        padding: 10px 14px;
+        border-radius: var(--radius-md);
+        font-size: 0.9rem;
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+
+      .success-message.show {
+        opacity: 1;
+      }
+
+      /* ───────── Transitions & Animations ───────── */
+      .fade-in {
+        animation: fadeIn 0.3s ease forwards;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+
+      /* ───────── Accessibility Improvements ───────── */
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border-width: 0;
+      }
+
+      :focus {
+        outline: 2px solid var(--primary);
+        outline-offset: 2px;
+      }
+
+      :focus:not(:focus-visible) {
+        outline: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="sidebar">
+      <h2>🎬 My Videos</h2>
+      <button id="pickFolder" class="btn accent">📁 Choose Folder</button>
+      <input
+        type="file"
+        id="folderInput"
+        webkitdirectory
+        directory
+        multiple
+        hidden
+      />
+
+      <div id="folderPath" style="display: none">
+        <strong>Current folder:</strong><br />
+        <span id="folderPathText"></span>
+      </div>
+
+      <div id="stats" style="display: none">
+        <div class="stat-item">
+          <span>Total Videos:</span>
+          <span id="totalCount">0</span>
+        </div>
+        <div class="stat-item">
+          <span>Completed:</span>
+          <span id="completedCount">0</span>
+        </div>
+        <div class="stat-item">
+          <span>Remaining:</span>
+          <span id="remainingCount">0</span>
+        </div>
+      </div>
+
+      <ul id="videoList"></ul>
+    </div>
+
+    <div id="main">
+      <div id="playerContainer">
+        <video
+          id="player"
+          controls
+          autoplay
+          data-cld-public-id="dog"
+          class="cld-video-player cld-fluid"
+        ></video>
+
+        <div id="emptyState">
+          <h3>Welcome to Video Progress Tracker</h3>
+          <p>
+            Select a folder containing video files to get started. You can track
+            your progress, take notes, and mark videos as completed.
+          </p>
+        </div>
+      </div>
+      <div id="focusOverlay"></div>
+
+      <div id="controls">
+        <div id="progressWrapper">
+          <label for="progressBar">Overall Progress</label>
+          <progress id="progressBar" value="0" max="100"></progress>
+          <span id="progressText">0%</span>
+        </div>
+
+        <div id="currentVideo" style="display: none">
+          Currently playing: <span id="currentVideoName">None</span>
+        </div>
+
+        <div class="button-row">
+          <button id="toggleFocus" class="btn secondary" disabled>
+            🎯 Focus Mode
+          </button>
+          <button id="toggleComplete" class="btn" disabled>
+            ✓ Mark Completed
+          </button>
+        </div>
+
+        <div class="notes-section">
+          <label for="notesArea">
+            📝 Notes
+            <span class="auto-save-indicator" id="autoSaveStatus"></span>
+          </label>
+          <textarea
+            id="notesArea"
+            placeholder="Write notes for this video..."
+          ></textarea>
+          <div style="display: flex; gap: 8px; align-items: center">
+            <button id="saveNotes" class="btn accent" disabled>
+              💾 Save Notes
+            </button>
+            <div class="success-message" id="saveSuccess">Notes saved!</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      /* ───────── Persistent Keys ───────── */
+      const SAVED_DIR_KEY = "savedDirMetadata";
+      const AUTO_SAVE_DELAY = 2000; // 2 seconds
+
+      /* ───────── DOM refs ───────── */
+      const pickFolderBtn = document.getElementById("pickFolder");
+      const folderInput = document.getElementById("folderInput");
+      const folderPath = document.getElementById("folderPath");
+      const folderPathText = document.getElementById("folderPathText");
+      const videoListEl = document.getElementById("videoList");
+      const player = document.getElementById("player");
+      const emptyState = document.getElementById("emptyState");
+      const progressBar = document.getElementById("progressBar");
+      const progressText = document.getElementById("progressText");
+      const currentVideo = document.getElementById("currentVideo");
+      const currentVideoName = document.getElementById("currentVideoName");
+      const toggleFocusBtn = document.getElementById("toggleFocus");
+      const toggleCompBtn = document.getElementById("toggleComplete");
+      const saveNotesBtn = document.getElementById("saveNotes");
+      const notesArea = document.getElementById("notesArea");
+      const saveSuccess = document.getElementById("saveSuccess");
+      const autoSaveStatus = document.getElementById("autoSaveStatus");
+      const stats = document.getElementById("stats");
+      const totalCount = document.getElementById("totalCount");
+      const completedCount = document.getElementById("completedCount");
+      const remainingCount = document.getElementById("remainingCount");
+
+      /* ───────── State ───────── */
+      let files = [];
+      let currentFile = null;
+      let autoSaveTimeout = null;
+
+      /* ───────── Helpers ───────── */
+      const vidRegex = /\.(mp4|webm|ogg|mov|mkv|avi|flv|wmv|m4v)$/i;
+      const isVideo = (f) =>
+        (f.type ? f.type.startsWith("video/") : false) || vidRegex.test(f.name);
+      const keyFor = (f) => f.webkitRelativePath || f.fullPath || f.name;
+      const compKey = (f) => "completed_" + keyFor(f);
+      const noteKey = (f) => "notes_" + keyFor(f);
+      const isCompleted = (f) => localStorage.getItem(compKey(f)) === "true";
+
+      /* ───────── UI Updates ───────── */
+      function updateProgress() {
+        if (!files.length) {
+          progressBar.value = 0;
+          progressText.textContent = "0%";
+          return;
+        }
+
+        const completed = files.filter(isCompleted).length;
+        const total = files.length;
+        const pct = Math.round((100 * completed) / total);
+
+        progressBar.value = pct;
+        progressText.textContent = `${pct}%`;
+
+        // Update stats
+        totalCount.textContent = total;
+        completedCount.textContent = completed;
+        remainingCount.textContent = total - completed;
+      }
+
+      function renderList() {
+        videoListEl.innerHTML = "";
+
+        if (!files.length) {
+          const li = document.createElement("li");
+          li.textContent = "No videos found. Select a folder with video files.";
+          li.classList.add("placeholder");
+          videoListEl.appendChild(li);
+          return;
+        }
+
+        files.forEach((f, i) => {
+          const li = document.createElement("li");
+          li.textContent =
+            f.name + (f.placeholder ? " (re-select folder)" : "");
+          li.title = f.name; // Full name on hover
+
+          if (f === currentFile) li.classList.add("active");
+          if (isCompleted(f)) li.classList.add("completed");
+          if (f.placeholder) li.classList.add("placeholder");
+          else li.addEventListener("click", () => loadVideo(i));
+
+          videoListEl.appendChild(li);
+        });
+      }
+
+      function updateCompleteBtn() {
+        if (!currentFile || currentFile.placeholder) {
+          toggleCompBtn.disabled = true;
+          return;
+        }
+        toggleCompBtn.disabled = false;
+        toggleCompBtn.innerHTML = isCompleted(currentFile)
+          ? "↶ Mark Incomplete"
+          : "✓ Mark Completed";
+      }
+
+      function updateCurrentVideoInfo() {
+        if (!currentFile || currentFile.placeholder) {
+          currentVideo.style.display = "none";
+          return;
+        }
+        currentVideo.style.display = "block";
+        currentVideoName.textContent = currentFile.name;
+      }
+
+      function showSaveSuccess() {
+        saveSuccess.classList.add("show");
+        setTimeout(() => saveSuccess.classList.remove("show"), 2000);
+      }
+
+      /* ───────── Core Actions ───────── */
+      function loadVideo(index) {
+        if (index < 0 || index >= files.length) return;
+
+        const file = files[index];
+        if (file.placeholder) return;
+
+        currentFile = file;
+
+        // Clean up previous video URL
+        if (player.src && player.src.startsWith("blob:")) {
+          URL.revokeObjectURL(player.src);
+        }
+
+        try {
+          player.src = URL.createObjectURL(file);
+          player.style.display = "block";
+          emptyState.style.display = "none";
+        } catch (error) {
+          console.error("Error loading video:", error);
+          showError("Failed to load video file");
+          return;
+        }
+
+        // Enable controls
+        toggleCompBtn.disabled = false;
+        saveNotesBtn.disabled = false;
+        toggleFocusBtn.disabled = false;
+
+        // Load notes
+        notesArea.value = localStorage.getItem(noteKey(currentFile)) || "";
+
+        // Update UI
+        updateCompleteBtn();
+        updateCurrentVideoInfo();
+        renderList();
+      }
+
+      function toggleComplete() {
+        if (!currentFile || currentFile.placeholder) return;
+
+        const newState = !isCompleted(currentFile);
+        localStorage.setItem(compKey(currentFile), newState.toString());
+
+        updateCompleteBtn();
+        updateProgress();
+        renderList();
+
+        // Auto-advance to next incomplete video
+        if (newState) {
+          const nextIncomplete = files.findIndex(
+            (f, i) =>
+              i > files.indexOf(currentFile) &&
+              !isCompleted(f) &&
+              !f.placeholder
+          );
+          if (nextIncomplete !== -1) {
+            setTimeout(() => loadVideo(nextIncomplete), 500);
+          }
+        }
+      }
+
+      function toggleFocus() {
+        document.body.classList.toggle("focus-mode");
+        const isFocusMode = document.body.classList.contains("focus-mode");
+        toggleFocusBtn.innerHTML = isFocusMode
+          ? "↶ Exit Focus"
+          : "🎯 Focus Mode";
+      }
+
+      function saveNotes() {
+        if (!currentFile || currentFile.placeholder) return;
+
+        localStorage.setItem(noteKey(currentFile), notesArea.value);
+        showSaveSuccess();
+        clearAutoSaveTimeout();
+        autoSaveStatus.textContent = "";
+      }
+
+      function clearAutoSaveTimeout() {
+        if (autoSaveTimeout) {
+          clearTimeout(autoSaveTimeout);
+          autoSaveTimeout = null;
+        }
+      }
+
+      function setupAutoSave() {
+        clearAutoSaveTimeout();
+        autoSaveStatus.textContent = "Auto-saving...";
+
+        autoSaveTimeout = setTimeout(() => {
+          if (currentFile && !currentFile.placeholder) {
+            localStorage.setItem(noteKey(currentFile), notesArea.value);
+            autoSaveStatus.textContent = "Saved automatically";
+            setTimeout(() => (autoSaveStatus.textContent = ""), 2000);
+          }
+        }, AUTO_SAVE_DELAY);
+      }
+
+      function showError(message) {
+        // Simple error handling - could be enhanced with proper error UI
+        console.error(message);
+      }
+
+      /* ───────── Folder Handling ───────── */
+      function handleFiles(fileList) {
+        if (!fileList || !fileList.length) return;
+
+        files = Array.from(fileList)
+          .filter(isVideo)
+          .sort((a, b) =>
+            a.name.localeCompare(b.name, undefined, { numeric: true })
+          );
+
+        if (!files.length) {
+          showError("No video files found in the selected folder");
+          return;
+        }
+
+        // Save directory metadata
+        localStorage.setItem(
+          SAVED_DIR_KEY,
+          JSON.stringify(
+            files.map((f) => ({
+              name: f.name,
+              rel: keyFor(f),
+              size: f.size,
+              lastModified: f.lastModified,
+            }))
+          )
+        );
+
+        // Show folder path
+        if (files[0].webkitRelativePath) {
+          const folderName = files[0].webkitRelativePath.split("/")[0];
+          folderPathText.textContent = folderName;
+          folderPath.style.display = "block";
+        }
+
+        // Reset state
+        currentFile = null;
+
+        // Update UI
+        stats.style.display = "block";
+        renderList();
+        updateProgress();
+
+        // Auto-select first incomplete video
+        const firstIncomplete = files.findIndex((f) => !isCompleted(f));
+        if (firstIncomplete !== -1) {
+          loadVideo(firstIncomplete);
+        } else if (files.length) {
+          loadVideo(0); // All completed, load first one
+        }
+      }
+
+      /* ───────── Session Restoration ───────── */
+      function restorePlaceholderList() {
+        try {
+          const saved = JSON.parse(localStorage.getItem(SAVED_DIR_KEY) || "[]");
+          if (!saved.length) return;
+
+          files = saved.map((meta) => ({
+            ...meta,
+            placeholder: true,
+            type: "", // Ensure isVideo check works
+          }));
+
+          stats.style.display = "block";
+          renderList();
+          updateProgress();
+
+          // Show message about re-selecting
+          const message = document.createElement("div");
+          message.className = "error-message";
+          message.textContent =
+            "Previous session found. Please re-select your folder to continue.";
+          document.getElementById("sidebar").insertBefore(message, videoListEl);
+
+          setTimeout(() => message.remove(), 5000);
+        } catch (e) {
+          console.error("Failed to restore session:", e);
+        }
+      }
+
+      /* ───────── Keyboard Shortcuts ───────── */
+      function setupKeyboardShortcuts() {
+        document.addEventListener("keydown", (e) => {
+          // Focus mode toggle
+          if (
+            e.key === "Escape" &&
+            document.body.classList.contains("focus-mode")
+          ) {
+            toggleFocus();
+            return;
+          }
+
+          // Only handle other shortcuts when not typing in textarea
+          if (e.target === notesArea) return;
+
+          switch (e.key) {
+            case "f":
+            case "F":
+              if (!toggleFocusBtn.disabled) {
+                e.preventDefault();
+                toggleFocus();
+              }
+              break;
+            case " ":
+              if (player.style.display !== "none") {
+                e.preventDefault();
+                if (player.paused) player.play();
+                else player.pause();
+              }
+              break;
+            case "c":
+            case "C":
+              if (!toggleCompBtn.disabled) {
+                e.preventDefault();
+                toggleComplete();
+              }
+              break;
+            case "ArrowLeft":
+              if (currentFile && files.length > 1) {
+                e.preventDefault();
+                const currentIndex = files.indexOf(currentFile);
+                const prevIndex =
+                  currentIndex > 0 ? currentIndex - 1 : files.length - 1;
+                loadVideo(prevIndex);
+              }
+              break;
+            case "ArrowRight":
+              if (currentFile && files.length > 1) {
+                e.preventDefault();
+                const currentIndex = files.indexOf(currentFile);
+                const nextIndex =
+                  currentIndex < files.length - 1 ? currentIndex + 1 : 0;
+                loadVideo(nextIndex);
+              }
+              break;
+          }
+        });
+      }
+
+      /* ───────── Event Listeners ───────── */
+      function setupEventListeners() {
+        pickFolderBtn.addEventListener("click", () => folderInput.click());
+
+        folderInput.addEventListener("change", (e) => {
+          if (e.target.files && e.target.files.length) {
+            handleFiles(e.target.files);
+          }
+        });
+
+        toggleCompBtn.addEventListener("click", toggleComplete);
+        toggleFocusBtn.addEventListener("click", toggleFocus);
+        saveNotesBtn.addEventListener("click", saveNotes);
+
+        // Auto-save notes
+        notesArea.addEventListener("input", setupAutoSave);
+
+        // Video error handling
+        player.addEventListener("error", (e) => {
+          console.error("Video playback error:", e);
+          showError("Error playing video file");
+        });
+
+        // Cleanup on page unload
+        window.addEventListener("beforeunload", () => {
+          if (player.src && player.src.startsWith("blob:")) {
+            URL.revokeObjectURL(player.src);
+          }
+        });
+      }
+
+      /* ───────── Initialization ───────── */
+      function init() {
+        setupEventListeners();
+        setupKeyboardShortcuts();
+        restorePlaceholderList();
+      }
+
+      // Start the app
+      init();
+    </script>
+  </body>
+</html>
